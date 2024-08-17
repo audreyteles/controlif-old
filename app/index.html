@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controlif</title>
+    <style>
+        body{
+            background-color: #F2F2F2;
+        }
+        * {
+            padding: 0;
+            margin: 0;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        select {
+            margin-top: 10vh;
+            margin-bottom: 1vh;
+            width: 50%;
+            border-radius: 5px;
+            height: 20px;
+        }
+
+        #videoSource {
+            width: 90px;
+            margin-right: 40px;
+        }
+
+        main {
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        select {
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+        }
+
+        nav {
+            background-color: #B4D9B9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 10vh;
+        }
+
+        nav ul {
+            width: 100%;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        li {
+            list-style: none;
+        }
+
+        nav ul li a {
+            text-decoration: none;
+            color: black;
+
+        }
+
+        #presence-button {
+            color: white;
+            background-color: #2EA640;
+            height: 30px;
+            border-radius: 5px;
+            border: none;
+        }
+
+
+        #activities-section {
+            margin-top: 10vh;
+            margin-bottom: 5vh;
+        }
+
+        #start-button {
+            cursor: pointer;
+            width: 50%;
+            background-color: #2EA640;
+            border-radius: 5px;
+            border: none;
+            height: 30px;
+            color: white;
+            font-weight: 200;
+        }
+
+
+        #video {
+            /*transform: scaleX(-1);*/
+            background-color: black;
+            width: 80vw;
+            height: 100%;
+            border-style: solid;
+            border-radius: 10px;
+            border-color: #2EA640;
+        }
+
+        #logo img {
+            width: 40px;
+            margin-left: 120px;
+
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        #notify {
+            display: none;
+            border-style: solid;
+            border-color: white;
+            /*background-color: rgb(215, 247, 250);*/
+            width: 80%;
+            height: 40px;
+            border-radius: 10px;
+            color: white;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 5vh;
+        }
+
+        #video,
+        select,
+        #start-button,
+        #presence-button,
+        #notify {
+            width: 65vw;
+        }
+
+        button {
+            margin-top: 20px;
+        }
+
+        #activities{
+            height: 40px;
+        }
+
+        #checkboxes {
+            width: 100%;
+            height: 30px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin-top: 10px;
+        }
+     
+
+        input[type='checkbox'] {
+            margin-right:5px;
+        }
+
+        #videoSource{
+            height: 40px;
+            width: fit-content;
+            border-style: none;
+        }
+
+
+        @media screen and (min-width: 769px) and (max-width: 1024px) {
+            #video,
+            select,
+            #presence-button,
+            #start-button,
+            #notify {
+                width: 35vw;
+            }
+        }
+
+        @media screen and (min-width: 1025px) and (max-width: 1200px) {
+
+            #video,
+            select,
+            #presence-button,
+            #start-button,
+            #notify {
+                width: 30vw;
+            }
+        }
+
+        @media screen and (min-width: 1201px) {
+
+            #video,
+            select,
+            #presence-button,
+            #start-button,
+            #notify {
+                width: 25vw;
+            }
+
+        }
+
+
+    </style>
+</head>
+
+<body>
+    <nav>
+        <ul>
+            <li></li>
+            <li><a href="/" id="logo"><img src="imgs/logo.png" alt=""></a>
+            </li>
+            <li><select name="videoSource" id="videoSource">
+                    <option value="0">Câmera</option>
+                </select>
+            </li>
+        </ul>
+    </nav>
+    <main>
+        <form action="/" method="post" onsubmit="return validarFormulario()">
+            <div id="activities-section">
+                <label for="activities"></label>
+                <select name="activities" id="activities">
+                    <option id="0">Escolha uma atividade</option>
+                </select>
+            </div>
+            <div id="notify">
+                <p></p>
+            </div>
+            <input type="hidden" name="participante" id="participante">
+            <video id="video" width="480" height="360" autoplay></video>
+            <br>
+            <input type="button" id="start-button" value="Identificar Estudante">
+            <br>
+            <div id="checkboxes">
+                <div><input type="checkbox" name="presenca" value="Entrada">Entrada</div>
+                <div><input type="checkbox" name="presenca" value="Saída">Saída</div>
+            </div>
+            <br>
+            <input id="presence-button" type="button" value="Validar Presença">
+        </form>
+        <canvas id="canvas"></canvas>
+    </main>
+    <script>
+        let notify = document.getElementById("notify");
+        let streaming = false;
+
+        const width = 320; // We will scale the photo width to this
+        let height = 0; // This will be computed based on the input stream
+        let video = document.getElementById("video");
+        let canvas = document.getElementById("canvas");
+        let buttonPresence = document.getElementById("presence-button");
+
+        video.addEventListener(
+            "canplay",
+            (ev) => {
+                if (!streaming) {
+                    height = video.videoHeight / (video.videoWidth / width);
+
+                    // Firefox currently has a bug where the height can't be read from
+                    // the video, so we will make assumptions if this happens.
+
+                    if (isNaN(height)) {
+                        height = width / (4 / 3);
+                    }
+
+                    video.setAttribute("width", width);
+                    video.setAttribute("height", height);
+                    canvas.setAttribute("width", width);
+                    canvas.setAttribute("height", height);
+                    streaming = true;
+                }
+            },
+            false,
+        );
+
+        const button = document.getElementById("start-button");
+
+        function dataURItoBlob(dataURI) {
+            var byteString;
+            if (dataURI.split(',')[0].indexOf('base64') >= 0)
+                byteString = atob(dataURI.split(',')[1]);
+            else
+                byteString = unescape(dataURI.split(',')[1]);
+            var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+            var ia = new Uint8Array(byteString.length);
+            for (var i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+            return new Blob([ia], { type: mimeString });
+        }
+
+        button.addEventListener('click', () => {
+            const context = canvas.getContext("2d");
+            if (width && height) {
+                canvas.width = width;
+                canvas.height = height;
+                context.drawImage(video, 0, 0, width, height);
+
+                let data = canvas.toDataURL();
+                data = dataURItoBlob(data);
+
+                const form = new FormData();
+                form.append("file", data);
+                let e = document.getElementById("activities");
+                let value = e.options[e.selectedIndex].value;
+                form.append("file", data);
+                form.append("activity", value);
+
+                const options = {
+                    method: 'POST',
+                    data: form,
+                    activity: value
+
+                };
+
+                options.body = form;
+                notify.style.display = "flex";
+                notify.style.backgroundColor = "rgb(1, 138, 127)";
+                notify.innerHTML = "Carregando...";
+                fetch('/student', options)
+                    .then(response => response.json())
+                    .then(response => {
+                        console.log(response);
+                        if (response['name'] === "Desconhecido" || response['name'] === "Nenhum rosto identificado!") {
+                            notify.style.display = "flex";
+                            notify.style.backgroundColor = "rgb(138, 22, 1)";
+                            notify.innerHTML = response['name'];
+                        } else {
+                            notify.style.display = "flex";
+                            notify.style.backgroundColor = "rgb(1, 138, 127)";
+                            notify.innerHTML = response['name'];
+
+                            let checkboxes = document.getElementsByName('presenca');
+                            if (data != null) {
+                                if (response['data']['entrada'] != null) {
+                                    checkboxes[0].checked = true;
+                                    checkboxes[0].disabled = true;
+
+                                }
+                                if (response['data']['saída'] != null) {
+                                    checkboxes[1].checked = true;
+                                }
+                            }
+                            document.getElementById("participante").value = response['data']['id_participante']
+
+                        }
+                    })
+                    .catch(err => {
+                        notify.style.display = "flex";
+                        notify.style.backgroundColor = "rgb(138, 22, 1)";
+                        notify.innerHTML = "Houve um erro!";
+                        console.error(err);
+                    }
+                    );
+
+            } else {
+                clearphoto();
+            }
+        });
+
+        buttonPresence.addEventListener('click', () => {
+            let checkboxes = document.getElementsByName('presenca');
+            let e = document.getElementById("activities");
+            let value = e.options[e.selectedIndex].value;
+
+
+            const options = {
+                method: 'POST',
+                body: new URLSearchParams({
+                    data: JSON.stringify({
+                        atividade: value,
+                        participante: document.getElementById("participante").value,
+                        entrada: checkboxes[0].checked ? 1 : 0,
+                        saida: checkboxes[1].checked ? 1 : 0
+                    })
+                })
+            };
+
+            notify.style.display = "flex";
+            notify.style.backgroundColor = "rgb(1, 138, 127)";
+            notify.innerHTML = "Validando...";
+
+            fetch('student/validations', options)
+                .then(response => response.json())
+                .then(response => {
+                    console.log(response);
+                    notify.style.display = "flex";
+                    notify.style.backgroundColor = "rgb(1, 138, 127)";
+                    notify.innerHTML = "Participação validada!";
+                })
+                .catch(err => {
+                    notify.style.display = "flex";
+                    notify.style.backgroundColor = "rgb(138, 22, 1)";
+                    notify.innerHTML = "Presença não validada!";
+                    console.error(err);
+                }
+                );
+        });
+
+        window.onload = async function () {
+            const options = {
+                method: 'POST',
+            };
+
+            fetch('/student/activities', options)
+                .then(response => response.json())
+                .then(response => {
+                    console.log(response)
+                    let activities = document.getElementById("activities");
+                    for (const activity of response) {
+                        const option = document.createElement('option');
+                        option.text = activity['nome'];
+                        option.value = activity['idAtividades'];
+                        activities.appendChild(option);
+                    }
+                })
+                .catch(err => console.error(err));
+
+            fetch('/student/all', options)
+                .then(response => response.json())
+                .then(response => {
+                    console.log(response);
+                })
+                .catch(err => console.error(err));
+        }
+
+        function clearphoto() {
+            const context = canvas.getContext("2d");
+            context.fillStyle = "#AAA";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+            const data = canvas.toDataURL("image/png");
+            photo.setAttribute("src", data);
+        }
+
+        var videoElement = document.querySelector('video');
+        var videoSelect = document.querySelector('select#videoSource');
+
+        videoSelect.onchange = getStream;
+
+        getStream().then(getDevices).then(gotDevices);
+
+        function getDevices() {
+            return navigator.mediaDevices.enumerateDevices();
+        }
+
+        function gotDevices(deviceInfos) {
+            window.deviceInfos = deviceInfos; // make available to console
+            console.log('Available input and output devices:', deviceInfos);
+            for (const deviceInfo of deviceInfos) {
+                if (deviceInfo.kind === 'videoinput') {
+                    const option = document.createElement('option');
+                    option.value = deviceInfo.deviceId;
+                    option.text = deviceInfo.label || `Camera ${videoSelect.length + 1}`;
+                    videoSelect.appendChild(option);
+                }
+            }
+        }
+
+        function validarFormulario() {
+            let checkboxes = document.getElementsByName('presenca');
+
+            let peloMenosUmMarcado = false;
+            for (var i = 0; i < checkboxes.length; i++) {
+                if (checkboxes[i].checked) {
+                    peloMenosUmMarcado = true;
+                    break;
+                }
+            }
+
+            if (!peloMenosUmMarcado) {
+                alert('Selecione pelo menos um checkbox para validar.');
+                return false; // Impede o envio do formulário
+            }
+            return true;
+        }
+
+        function getStream() {
+            if (window.stream) {
+                window.stream.getTracks().forEach(track => {
+                    track.stop();
+                });
+            }
+            const videoSource = videoSelect.value;
+            const constraints = {
+                audio: false,
+                video: { deviceId: videoSource ? { exact: videoSource } : undefined }
+            };
+            return navigator.mediaDevices.getUserMedia(constraints).then(gotStream).catch(handleError);
+        }
+
+        function gotStream(stream) {
+            videoSelect.selectedIndex = [...videoSelect.options].findIndex(option => option.text === stream.getVideoTracks()[0].label);
+            videoElement.srcObject = stream;
+        }
+
+        function handleError(error) {
+            console.error('Error: ', error);
+        }
+
+
+    </script>
+
+</body>
+
+</html>
